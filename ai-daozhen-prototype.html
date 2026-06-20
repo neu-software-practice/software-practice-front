@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI智能导诊 · 原型</title>
+<style>
+  :root{
+    --primary:#1677ff;
+    --primary-dark:#0958d9;
+    --teal:#13b6a6;
+    --bg:#f2f4f7;
+    --card:#ffffff;
+    --ink:#1f2329;
+    --sub:#6b7280;
+    --line:#e6e8eb;
+    --danger:#e23b3b;
+    --warn-bg:#fff1f0;
+    --shadow:0 8px 28px rgba(20,40,80,.12);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%}
+  body{
+    font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:linear-gradient(160deg,#e7ecf5,#dfe7f2);
+    display:flex;align-items:center;justify-content:center;
+    min-height:100vh;padding:24px;color:var(--ink);
+  }
+  .stage{display:flex;flex-direction:column;align-items:center;gap:14px}
+  .hint{font-size:13px;color:#5b6471;letter-spacing:.3px}
+  /* phone shell */
+  .phone{
+    width:380px;height:780px;background:#000;border-radius:46px;
+    padding:12px;box-shadow:0 24px 60px rgba(20,40,80,.30);position:relative;
+  }
+  .screen{
+    position:relative;width:100%;height:100%;background:var(--bg);
+    border-radius:36px;overflow:hidden;display:flex;flex-direction:column;
+  }
+  .notch{position:absolute;top:0;left:50%;transform:translateX(-50%);
+    width:150px;height:26px;background:#000;border-radius:0 0 18px 18px;z-index:60}
+  .statusbar{height:42px;display:flex;align-items:center;justify-content:space-between;
+    padding:0 22px;font-size:13px;font-weight:600;color:var(--ink);z-index:50;flex:none}
+  .statusbar .dots{display:flex;gap:5px;align-items:center}
+  .statusbar .dots span{font-size:12px}
+  /* pages */
+  .page{position:absolute;inset:42px 0 0 0;display:none;flex-direction:column}
+  .page.active{display:flex}
+  .topbar{height:52px;flex:none;display:flex;align-items:center;gap:10px;
+    padding:0 14px;background:#fff;border-bottom:1px solid var(--line)}
+  .topbar .title{font-size:16px;font-weight:600;flex:1;text-align:center}
+  .iconbtn{width:34px;height:34px;border-radius:10px;border:none;background:transparent;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:20px;color:var(--ink)}
+  .ghost-btn{border:1px solid var(--line);background:#fff;border-radius:18px;
+    padding:6px 12px;font-size:13px;color:var(--primary);cursor:pointer;font-weight:600;
+    display:flex;align-items:center;gap:4px}
+
+  /* ===== 挂号入口页 ===== */
+  #page-home .content{flex:1;overflow-y:auto;padding:14px}
+  .home-head{background:linear-gradient(135deg,var(--primary),#3f8cff);color:#fff;
+    border-radius:16px;padding:16px 18px;margin-bottom:14px}
+  .home-head h2{margin:0 0 4px;font-size:18px}
+  .home-head p{margin:0;font-size:12.5px;opacity:.9}
+  .sec-title{font-size:14px;font-weight:600;margin:6px 4px 10px;color:#374151}
+  .dept{background:#fff;border-radius:14px;padding:14px 16px;margin-bottom:10px;
+    display:flex;align-items:center;gap:12px;border:1px solid var(--line)}
+  .dept .ic{width:40px;height:40px;border-radius:11px;background:#eef4ff;color:var(--primary);
+    display:flex;align-items:center;justify-content:center;font-size:20px;flex:none}
+  .dept .nm{font-size:15px;font-weight:600}
+  .dept .ds{font-size:12px;color:var(--sub);margin-top:2px}
+  .dept .arrow{margin-left:auto;color:#c0c6cf;font-size:18px}
+  .home-tipbar{background:#eef6ff;border:1px dashed #9cc3ff;border-radius:12px;
+    padding:12px 14px;display:flex;align-items:center;gap:10px;margin-bottom:14px;cursor:pointer}
+  .home-tipbar .t1{font-size:13.5px;font-weight:600;color:var(--primary-dark)}
+  .home-tipbar .t2{font-size:11.5px;color:#5878a8;margin-top:1px}
+  .home-tipbar .go{margin-left:auto;color:var(--primary);font-size:13px;font-weight:600;white-space:nowrap}
+
+  /* AI FAB */
+  .fab{position:absolute;right:18px;bottom:26px;z-index:40;display:flex;flex-direction:column;
+    align-items:center;gap:6px;cursor:pointer}
+  .fab .orb{width:62px;height:62px;border-radius:50%;
+    background:linear-gradient(135deg,var(--teal),var(--primary));
+    box-shadow:0 10px 24px rgba(19,120,160,.45);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;
+    font-weight:700;line-height:1.1;text-align:center;
+    animation:floaty 2.6s ease-in-out infinite}
+  .fab .lbl{background:#fff;border:1px solid var(--line);border-radius:12px;font-size:11px;
+    padding:3px 8px;color:#374151;box-shadow:0 4px 10px rgba(0,0,0,.06);white-space:nowrap}
+  @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+
+  /* ===== AI 对话页 ===== */
+  #page-chat{background:var(--bg)}
+  .chat-scroll{flex:1;overflow-y:auto;padding:16px 14px 20px;display:flex;flex-direction:column;gap:12px}
+  .ai-intro{display:flex;gap:10px;align-items:flex-start}
+  .avatar{width:36px;height:36px;border-radius:50%;flex:none;
+    background:linear-gradient(135deg,var(--teal),var(--primary));color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700}
+  .bubble{max-width:74%;padding:11px 13px;border-radius:14px;font-size:14px;line-height:1.55;
+    box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .bubble.ai{background:#fff;border-top-left-radius:4px}
+  .row{display:flex;gap:10px;align-items:flex-end}
+  .row.me{justify-content:flex-end}
+  .bubble.me{background:var(--primary);color:#fff;border-top-right-radius:4px}
+  .disclaimer{font-size:11px;color:#9aa3af;text-align:center;margin:2px 10px 0;line-height:1.5}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 0 46px}
+  .chip{background:#fff;border:1px solid #cfe0ff;color:var(--primary);border-radius:16px;
+    padding:7px 13px;font-size:13px;cursor:pointer;transition:.15s}
+  .chip:active{transform:scale(.95)}
+  .chip.hot{border-color:#ffd0c8;color:var(--danger);background:#fff6f4}
+  .typing .bubble{display:flex;gap:4px;align-items:center;padding:14px 16px}
+  .typing i{width:7px;height:7px;border-radius:50%;background:#bcc4d0;display:inline-block;
+    animation:blink 1.2s infinite}
+  .typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
+  @keyframes blink{0%,80%,100%{opacity:.3}40%{opacity:1}}
+  .inputbar{flex:none;border-top:1px solid var(--line);background:#fff;padding:10px 12px;
+    display:flex;align-items:center;gap:8px}
+  .inputbar .voice{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);
+    background:#f6f8fb;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;flex:none}
+  .inputbar input{flex:1;border:none;background:#f1f3f6;border-radius:20px;padding:10px 14px;
+    font-size:14px;outline:none}
+  .inputbar .send{flex:none;border:none;background:var(--primary);color:#fff;border-radius:20px;
+    padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer}
+
+  /* ===== 推荐卡（底部弹出） ===== */
+  .sheet-mask{position:absolute;inset:0;background:rgba(0,0,0,.35);z-index:70;display:none;opacity:0;transition:.25s}
+  .sheet-mask.show{display:block;opacity:1}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;z-index:75;
+    border-radius:22px 22px 0 0;padding:8px 16px 18px;transform:translateY(102%);
+    transition:transform .32s cubic-bezier(.22,1,.36,1);max-height:80%;overflow-y:auto}
+  .sheet.show{transform:translateY(0)}
+  .grip{width:38px;height:4px;background:#dfe3e8;border-radius:3px;margin:6px auto 12px}
+  .sheet h3{margin:0 0 3px;font-size:17px}
+  .sheet .sub{font-size:12px;color:var(--sub);margin:0 0 14px}
+  .cand{border:1.5px solid var(--line);border-radius:14px;padding:13px 14px;margin-bottom:10px;
+    cursor:pointer;transition:.15s;position:relative}
+  .cand.sel{border-color:var(--primary);background:#f5f9ff}
+  .cand .ctop{display:flex;align-items:center;gap:8px}
+  .cand .cname{font-size:15.5px;font-weight:700}
+  .tag{font-size:11px;padding:2px 8px;border-radius:8px;font-weight:600}
+  .tag.best{background:#e6f4ff;color:var(--primary)}
+  .tag.maybe{background:#f3f0ff;color:#7a5af0}
+  .cand .why{font-size:12.5px;color:#5b6471;margin-top:6px;line-height:1.5}
+  .cand .radio{position:absolute;top:13px;right:13px;width:20px;height:20px;border-radius:50%;
+    border:2px solid #ccd2da}
+  .cand.sel .radio{border-color:var(--primary);background:var(--primary);
+    box-shadow:inset 0 0 0 3px #fff}
+  .sheet-actions{display:flex;gap:10px;margin-top:6px}
+  .btn{flex:1;border:none;border-radius:13px;padding:14px;font-size:15px;font-weight:600;cursor:pointer}
+  .btn.primary{background:var(--primary);color:#fff}
+  .btn.primary:disabled{background:#a9c6ff}
+  .btn.second{background:#fff;color:#374151;border:1.5px solid var(--line);flex:.85}
+
+  /* ===== 急症拦截弹窗 ===== */
+  .modal-mask{position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:90;
+    display:none;align-items:center;justify-content:center;padding:26px}
+  .modal-mask.show{display:flex}
+  .modal{background:#fff;border-radius:20px;width:100%;overflow:hidden;text-align:center}
+  .modal .mhead{background:var(--danger);color:#fff;padding:20px 16px 16px}
+  .modal .mhead .big{font-size:34px}
+  .modal .mhead h3{margin:8px 0 0;font-size:18px}
+  .modal .mbody{padding:16px 18px 4px}
+  .modal .mbody p{font-size:13.5px;color:#444;line-height:1.6;margin:0 0 12px}
+  .modal .mbody .kw{color:var(--danger);font-weight:600}
+  .modal .mactions{padding:6px 16px 18px;display:flex;flex-direction:column;gap:9px}
+  .btn.danger{background:var(--danger);color:#fff;width:100%}
+  .btn.plain{background:#f2f3f5;color:#555;width:100%}
+
+  /* ===== 交接 / 导回传统系统 ===== */
+  .handoff{position:absolute;inset:0;background:#fff;z-index:95;display:none;
+    flex-direction:column;align-items:center;justify-content:center;padding:30px;text-align:center}
+  .handoff.show{display:flex}
+  .check{width:78px;height:78px;border-radius:50%;background:#eafaf0;color:#22a05a;
+    display:flex;align-items:center;justify-content:center;font-size:42px;margin-bottom:18px;
+    animation:pop .4s ease}
+  @keyframes pop{0%{transform:scale(.4);opacity:0}100%{transform:scale(1);opacity:1}}
+  .handoff h3{margin:0 0 8px;font-size:19px}
+  .handoff p{margin:0;font-size:13.5px;color:var(--sub);line-height:1.6;max-width:240px}
+  .handoff .barwrap{width:200px;height:5px;background:#eef0f3;border-radius:4px;margin:22px 0 8px;overflow:hidden}
+  .handoff .bar{height:100%;width:0;background:var(--primary);border-radius:4px;transition:width 1.6s linear}
+  .handoff .small{font-size:11px;color:#aab0b8}
+  .handoff .resetbtn{margin-top:22px;border:1px solid var(--line);background:#fff;border-radius:20px;
+    padding:9px 20px;font-size:13px;color:var(--primary);cursor:pointer;font-weight:600}
+
+  /* toast */
+  .toast{position:absolute;left:50%;bottom:90px;transform:translateX(-50%) translateY(10px);
+    background:rgba(30,34,40,.92);color:#fff;font-size:13px;padding:10px 16px;border-radius:22px;
+    z-index:120;opacity:0;transition:.25s;pointer-events:none;max-width:80%;text-align:center}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .flag{font-size:10px;color:#fff;background:rgba(255,255,255,.22);border-radius:6px;padding:1px 6px;margin-left:6px}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="phone">
+    <div class="screen">
+      <div class="notch"></div>
+      <div class="statusbar">
+        <span id="clock">08:37</span>
+        <span class="dots"><span>📶</span><span>📡</span><span>🔋</span></span>
+      </div>
+
+      <!-- ============ 挂号入口页（传统系统，简化示意） ============ -->
+      <div class="page active" id="page-home">
+        <div class="content">
+          <div class="home-head">
+            <h2>预约挂号</h2>
+            <p>市第一人民医院 · 请选择就诊科室</p>
+          </div>
+
+          <div class="home-tipbar" onclick="openChat()">
+            <div>
+              <div class="t1">不知道挂哪个科？</div>
+              <div class="t2">描述症状，AI 帮你智能导诊</div>
+            </div>
+            <div class="go">去试试 ›</div>
+          </div>
+
+          <div class="sec-title">科室列表</div>
+          <div class="dept"><div class="ic">🫁</div><div><div class="nm">呼吸内科</div><div class="ds">咳嗽、发热、气促</div></div><div class="arrow">›</div></div>
+          <div class="dept"><div class="ic">🧠</div><div><div class="nm">神经内科</div><div class="ds">头痛、头晕、失眠</div></div><div class="arrow">›</div></div>
+          <div class="dept"><div class="ic">🩺</div><div><div class="nm">消化内科</div><div class="ds">腹痛、腹泻、反酸</div></div><div class="arrow">›</div></div>
+          <div class="dept"><div class="ic">🦴</div><div><div class="nm">骨科</div><div class="ds">关节痛、扭伤、骨折</div></div><div class="arrow">›</div></div>
+          <div class="dept"><div class="ic">🧴</div><div><div class="nm">皮肤科</div><div class="ds">皮疹、瘙痒、过敏</div></div><div class="arrow">›</div></div>
+        </div>
+
+        <!-- AI 功能入口 -->
+        <div class="fab" onclick="openChat()">
+          <div class="orb">智能<br>导诊</div>
+          <div class="lbl">问问 AI</div>
+        </div>
+      </div>
+
+      <!-- ============ AI 对话页 ============ -->
+      <div class="page" id="page-chat">
+        <div class="topbar">
+          <button class="iconbtn" onclick="backHome()">‹</button>
+          <div class="title">AI 智能导诊</div>
+          <button class="ghost-btn" onclick="toHuman()">👩‍⚕️ 转人工</button>
+        </div>
+
+        <div class="chat-scroll" id="chatScroll">
+          <div class="ai-intro">
+            <div class="avatar">AI</div>
+            <div class="bubble ai">您好，我是智能导诊助手 👋<br>请描述您的不适症状，例如「这两天发烧咳嗽」「右下腹一直疼」，我来帮您匹配合适的科室。</div>
+          </div>
+          <div class="chips" id="chips">
+            <div class="chip" onclick="pick('发烧')">发烧</div>
+            <div class="chip" onclick="pick('咳嗽')">咳嗽</div>
+            <div class="chip" onclick="pick('头痛')">头痛</div>
+            <div class="chip" onclick="pick('腹痛')">腹痛</div>
+            <div class="chip" onclick="pick('关节疼')">关节疼</div>
+            <div class="chip" onclick="pick('皮疹瘙痒')">皮疹瘙痒</div>
+            <div class="chip hot" onclick="pick('胸口剧烈疼痛、喘不上气')">胸痛 / 呼吸困难</div>
+          </div>
+          <div class="disclaimer">AI 建议仅供参考，不构成诊断；如病情紧急请立即就医。</div>
+        </div>
+
+        <div class="inputbar">
+          <button class="voice" onclick="toastMsg('🎙️ 长按说话（演示）')">🎤</button>
+          <input id="msgInput" placeholder="描述您的不适…" onkeydown="if(event.key==='Enter')sendInput()">
+          <button class="send" onclick="sendInput()">发送</button>
+        </div>
+
+        <!-- 推荐卡 -->
+        <div class="sheet-mask" id="sheetMask" onclick="closeSheet()"></div>
+        <div class="sheet" id="sheet">
+          <div class="grip"></div>
+          <h3>为您推荐科室</h3>
+          <p class="sub" id="sheetSub">根据您的描述，建议优先选择以下科室：</p>
+          <div id="candList"></div>
+          <div class="sheet-actions">
+            <button class="btn second" onclick="reselect()">重新选择</button>
+            <button class="btn primary" id="confirmBtn" onclick="confirmDept()" disabled>确认，去挂号</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 急症拦截 -->
+      <div class="modal-mask" id="emModal">
+        <div class="modal">
+          <div class="mhead">
+            <div class="big">⚠️</div>
+            <h3>请立即就医</h3>
+          </div>
+          <div class="mbody">
+            <p>您描述的<span class="kw" id="emKw">胸痛、呼吸困难</span>可能提示<b>急危重症</b>，不建议自行挂号等待。</p>
+            <p>请立即拨打 <b>120</b> 或前往<b>急诊科</b>就诊。</p>
+          </div>
+          <div class="mactions">
+            <button class="btn danger" onclick="toastMsg('📞 正在呼叫 120（演示）')">📞 拨打 120</button>
+            <button class="btn plain" onclick="closeEm()">我已了解，继续咨询</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 导回传统系统 -->
+      <div class="handoff" id="handoff">
+        <div class="check">✓</div>
+        <h3 id="hoTitle">已为您选择 呼吸内科</h3>
+        <p>正在返回挂号系统，为您展示该科室的可约号源与医生…</p>
+        <div class="barwrap"><div class="bar" id="hoBar"></div></div>
+        <div class="small">AI 导诊已完成 · 交还至医院挂号流程</div>
+        <button class="resetbtn" onclick="resetAll()">↺ 重新演示</button>
+      </div>
+
+      <div class="toast" id="toast"></div>
+    </div>
+  </div>
+  <div class="hint">点击右下角「智能导诊」开始体验 · 试试症状气泡，或输入「胸痛」看急症拦截</div>
+</div>
+
+<script>
+/* ---------- 症状 → 科室 推荐知识库（演示用简化映射） ---------- */
+const EMERGENCY = ['胸痛','胸口','喘不上气','呼吸困难','呼吸急促','大出血','咯血','抽搐','昏迷','晕厥','意识不清','口角歪斜','半身','偏瘫','剧烈头痛'];
+const RULES = [
+  {k:['发烧','发热','咳嗽','咳','气促','咽痛','嗓子'], dept:[
+    {n:'呼吸内科',t:'best',w:'发热伴咳嗽，呼吸道感染可能性大，建议优先就诊。'},
+    {n:'感染科',t:'maybe',w:'持续高热或流行病接触史时可选感染科。'},
+    {n:'全科医学科',t:'maybe',w:'症状较轻或不典型，可先到全科分诊。'}]},
+  {k:['头痛','头疼','头晕','失眠','麻木'], dept:[
+    {n:'神经内科',t:'best',w:'头痛/头晕多与神经系统相关，建议首选。'},
+    {n:'全科医学科',t:'maybe',w:'偶发轻度头痛可先到全科评估。'}]},
+  {k:['腹痛','腹','肚子','腹泻','拉肚子','反酸','胃','恶心','呕吐'], dept:[
+    {n:'消化内科',t:'best',w:'腹痛伴消化道症状，建议首选消化内科。'},
+    {n:'普外科',t:'maybe',w:'右下腹固定压痛等需排查外科急腹症。'},
+    {n:'全科医学科',t:'maybe',w:'症状轻微可先到全科分诊。'}]},
+  {k:['关节','扭伤','骨','腰','腿疼','膝盖','摔'], dept:[
+    {n:'骨科',t:'best',w:'关节/骨骼疼痛或外伤，建议首选骨科。'},
+    {n:'康复医学科',t:'maybe',w:'慢性劳损、康复需求可选康复科。'}]},
+  {k:['皮疹','瘙痒','痒','过敏','起疹','红肿'], dept:[
+    {n:'皮肤科',t:'best',w:'皮疹、瘙痒等皮肤表现，建议首选皮肤科。'},
+    {n:'变态反应科',t:'maybe',w:'反复过敏可挂变态反应（过敏）科。'}]},
+];
+const DEFAULT_DEPT=[
+  {n:'全科医学科',t:'best',w:'症状暂不典型，建议先到全科分诊，再按需转专科。'},
+  {n:'导诊台人工',t:'maybe',w:'不确定时可转人工导诊进一步分流。'}];
+
+let selectedDept=null, currentDept='';
+
+/* ---------- 页面切换 ---------- */
+function openChat(){show('page-chat');}
+function backHome(){closeSheet();show('page-home');}
+function show(id){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');}
+
+/* ---------- 发送 / 选择 ---------- */
+function pick(text){addUser(text);hideChips();analyze(text);}
+function sendInput(){const el=document.getElementById('msgInput');const v=el.value.trim();
+  if(!v)return;el.value='';addUser(v);hideChips();analyze(v);}
+function hideChips(){const c=document.getElementById('chips');if(c)c.style.display='none';}
+
+function addUser(t){const s=document.getElementById('chatScroll');
+  const r=document.createElement('div');r.className='row me';
+  r.innerHTML='<div class="bubble me">'+esc(t)+'</div>';s.appendChild(r);scroll();}
+
+function addAI(html){const s=document.getElementById('chatScroll');
+  const r=document.createElement('div');r.className='ai-intro';
+  r.innerHTML='<div class="avatar">AI</div><div class="bubble ai">'+html+'</div>';
+  s.appendChild(r);scroll();}
+
+function typing(){const s=document.getElementById('chatScroll');
+  const r=document.createElement('div');r.className='ai-intro typing';r.id='typing';
+  r.innerHTML='<div class="avatar">AI</div><div class="bubble ai"><i></i><i></i><i></i></div>';
+  s.appendChild(r);scroll();}
+function stopTyping(){const t=document.getElementById('typing');if(t)t.remove();}
+
+/* ---------- 核心：分析 ---------- */
+function analyze(text){
+  // 急症拦截
+  if(EMERGENCY.some(k=>text.includes(k))){
+    typing();
+    setTimeout(()=>{stopTyping();showEm(text);},700);
+    return;
+  }
+  typing();
+  setTimeout(()=>{
+    stopTyping();
+    const depts=match(text);
+    addAI('根据您的描述，我为您匹配了以下科室，请确认或重新选择 👇');
+    renderSheet(depts);
+    openSheet();
+  },1100);
+}
+
+function match(text){
+  for(const r of RULES){ if(r.k.some(k=>text.includes(k))) return r.dept; }
+  return DEFAULT_DEPT;
+}
+
+/* ---------- 推荐卡 ---------- */
+function renderSheet(depts){
+  selectedDept=null;
+  document.getElementById('confirmBtn').disabled=true;
+  const list=document.getElementById('candList');list.innerHTML='';
+  depts.forEach((d,i)=>{
+    const el=document.createElement('div');
+    el.className='cand'+(i===0?' sel':'');
+    el.onclick=()=>selectCand(el,d.n);
+    el.innerHTML='<div class="ctop"><span class="cname">'+d.n+'</span>'+
+      '<span class="tag '+d.t+'">'+(d.t==='best'?'最匹配':'可能相关')+'</span></div>'+
+      '<div class="why">'+d.w+'</div><div class="radio"></div>';
+    list.appendChild(el);
+  });
+  // 默认选中第一个
+  if(depts.length){selectedDept=depts[0].n;document.getElementById('confirmBtn').disabled=false;}
+}
+function selectCand(el,name){
+  document.querySelectorAll('#candList .cand').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');selectedDept=name;
+  document.getElementById('confirmBtn').disabled=false;
+}
+function openSheet(){document.getElementById('sheetMask').classList.add('show');
+  document.getElementById('sheet').classList.add('show');}
+function closeSheet(){document.getElementById('sheetMask').classList.remove('show');
+  document.getElementById('sheet').classList.remove('show');}
+
+function reselect(){
+  closeSheet();
+  addAI('好的，请再补充描述一下您的症状，例如部位、持续时间、伴随表现，我会重新为您匹配。');
+  const c=document.getElementById('chips');if(c)c.style.display='flex';
+  document.getElementById('msgInput').focus();
+}
+
+/* ---------- 确认 → 导回传统系统 ---------- */
+function confirmDept(){
+  if(!selectedDept)return;
+  currentDept=selectedDept;closeSheet();
+  document.getElementById('hoTitle').textContent='已为您选择 '+currentDept;
+  const ho=document.getElementById('handoff');ho.classList.add('show');
+  const bar=document.getElementById('hoBar');bar.style.width='0';
+  setTimeout(()=>bar.style.width='100%',60);
+}
+
+/* ---------- 急症弹窗 ---------- */
+function showEm(text){
+  const hit=EMERGENCY.filter(k=>text.includes(k)).slice(0,2).join('、');
+  document.getElementById('emKw').textContent=hit||'相关症状';
+  document.getElementById('emModal').classList.add('show');
+}
+function closeEm(){document.getElementById('emModal').classList.remove('show');
+  addAI('已为您保留紧急提示。如症状缓解、确需普通门诊，请继续描述，我再帮您分诊。');}
+
+/* ---------- 转人工 / toast ---------- */
+function toHuman(){toastMsg('👩‍⚕️ 正在为您转接人工导诊台…');}
+let tt;
+function toastMsg(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');
+  clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),1900);}
+
+/* ---------- 重置 ---------- */
+function resetAll(){
+  document.getElementById('handoff').classList.remove('show');
+  document.getElementById('emModal').classList.remove('show');
+  closeSheet();
+  // 重建对话
+  const s=document.getElementById('chatScroll');
+  s.innerHTML=`
+    <div class="ai-intro"><div class="avatar">AI</div>
+      <div class="bubble ai">您好，我是智能导诊助手 👋<br>请描述您的不适症状，例如「这两天发烧咳嗽」「右下腹一直疼」，我来帮您匹配合适的科室。</div></div>
+    <div class="chips" id="chips">
+      <div class="chip" onclick="pick('发烧')">发烧</div>
+      <div class="chip" onclick="pick('咳嗽')">咳嗽</div>
+      <div class="chip" onclick="pick('头痛')">头痛</div>
+      <div class="chip" onclick="pick('腹痛')">腹痛</div>
+      <div class="chip" onclick="pick('关节疼')">关节疼</div>
+      <div class="chip" onclick="pick('皮疹瘙痒')">皮疹瘙痒</div>
+      <div class="chip hot" onclick="pick('胸口剧烈疼痛、喘不上气')">胸痛 / 呼吸困难</div>
+    </div>
+    <div class="disclaimer">AI 建议仅供参考，不构成诊断；如病情紧急请立即就医。</div>`;
+  show('page-home');
+}
+
+/* utils */
+function scroll(){const s=document.getElementById('chatScroll');setTimeout(()=>s.scrollTop=s.scrollHeight,30);}
+function esc(t){return t.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+/* live clock */
+setInterval(()=>{const d=new Date();document.getElementById('clock').textContent=
+  String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');},1000);
+</script>
+</body>
+</html>

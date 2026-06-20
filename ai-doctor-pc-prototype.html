@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>医生端 · AI 辅助接诊 原型</title>
+<style>
+:root{
+  --primary:#1677ff;--primary-d:#0958d9;--teal:#13b6a6;
+  --ink:#1f2329;--sub:#6b7280;--mut:#9aa3af;
+  --bg:#eef1f5;--panel:#fff;--line:#e6e8eb;--soft:#f5f7fa;
+  --danger:#e23b3b;--danger-bg:#fff1f0;--warn:#d98a00;--ok:#22a05a;
+  --hl:#fff3b0;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:#dde3ec;color:var(--ink);
+  display:flex;align-items:center;justify-content:center;min-height:100vh;padding:18px}
+.win{width:100%;max-width:1280px;height:760px;background:var(--bg);border-radius:12px;overflow:hidden;
+  box-shadow:0 26px 70px rgba(20,40,80,.28);display:flex;flex-direction:column}
+.winbar{height:38px;background:#e9edf3;display:flex;align-items:center;gap:8px;padding:0 14px;border-bottom:1px solid var(--line);flex:none}
+.winbar .dot{width:11px;height:11px;border-radius:50%}
+.winbar .r{background:#ff5f57}.winbar .y{background:#febc2e}.winbar .g{background:#28c840}
+.winbar .addr{margin-left:14px;font-size:12px;color:var(--sub);background:#fff;border:1px solid var(--line);
+  border-radius:7px;padding:3px 12px}
+.app{flex:1;display:flex;min-height:0}
+
+/* ---- 左：功能 / 患者列表 ---- */
+.side{width:208px;flex:none;background:#0f2a4a;color:#cdd9ea;display:flex;flex-direction:column}
+.side .brand{padding:15px 16px;font-size:15px;font-weight:700;color:#fff;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(255,255,255,.08)}
+.side .brand .l{width:24px;height:24px;border-radius:7px;background:linear-gradient(135deg,var(--teal),var(--primary));display:flex;align-items:center;justify-content:center;font-size:12px}
+.nav{padding:10px 8px;border-bottom:1px solid rgba(255,255,255,.08)}
+.nav a{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:8px;font-size:13px;color:#aebfd6;cursor:pointer}
+.nav a.on,.nav a:hover{background:rgba(255,255,255,.10);color:#fff}
+.plist{flex:1;overflow-y:auto;padding:8px}
+.plist .h{font-size:11px;color:#7f93b0;padding:6px 10px;letter-spacing:.5px}
+.pt{padding:10px 11px;border-radius:9px;cursor:pointer;margin-bottom:4px;display:flex;gap:9px;align-items:center}
+.pt:hover{background:rgba(255,255,255,.07)}
+.pt.on{background:rgba(22,119,255,.22);box-shadow:inset 0 0 0 1px rgba(120,170,255,.45)}
+.pt .av{width:30px;height:30px;border-radius:50%;background:#27406a;color:#cfe0ff;display:flex;align-items:center;justify-content:center;font-size:12px;flex:none}
+.pt .nm{font-size:13px;color:#eaf1fb;font-weight:600}
+.pt .mt{font-size:11px;color:#8ea3c2;margin-top:1px}
+.pt .badge{margin-left:auto;font-size:10px;background:var(--danger);color:#fff;border-radius:8px;padding:1px 6px}
+.pt .waitdot{margin-left:auto;width:8px;height:8px;border-radius:50%;background:#3fae6a}
+
+/* ---- 中：病历 ---- */
+.center{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg)}
+.chead{background:#fff;border-bottom:1px solid var(--line);padding:12px 18px;display:flex;align-items:center;gap:14px;flex:none}
+.chead .pn{font-size:17px;font-weight:700}
+.chead .meta{font-size:12.5px;color:var(--sub)}
+.chead .pill{font-size:11px;border:1px solid var(--line);border-radius:20px;padding:3px 10px;color:var(--sub)}
+.chead .src{margin-left:auto;font-size:11.5px;color:var(--teal);background:#e7faf6;border:1px solid #b9ebe2;border-radius:8px;padding:4px 10px}
+.crecord{flex:1;overflow-y:auto;padding:18px}
+.rtitle{font-size:14px;font-weight:700;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+.rtitle .ed{margin-left:auto;font-size:11.5px;color:var(--sub);font-weight:500}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12.5px;color:var(--sub);margin-bottom:5px;font-weight:600}
+.inp{min-height:40px;background:#fff;border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:13.5px;line-height:1.65;outline:none}
+.inp:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(22,119,255,.12)}
+.inp[contenteditable]:empty:before{content:attr(data-ph);color:#bcc3cd}
+.inp.area{min-height:70px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+mark.kw{background:transparent;color:inherit;border-radius:3px;padding:0 1px;transition:.2s}
+mark.kw.hl{background:var(--hl);box-shadow:0 0 0 2px var(--hl)}
+.savebar{flex:none;border-top:1px solid var(--line);background:#fff;padding:10px 18px;display:flex;align-items:center;gap:10px}
+.savebar .note{font-size:11.5px;color:var(--mut)}
+.btn{border:none;border-radius:9px;padding:9px 16px;font-size:13.5px;font-weight:600;cursor:pointer}
+.btn.primary{background:var(--primary);color:#fff}.btn.ghost{background:#fff;border:1px solid var(--line);color:#374151}
+
+/* ---- 右：AI 栏 ---- */
+.ai{width:360px;flex:none;background:#fff;border-left:1px solid var(--line);display:flex;flex-direction:column;transition:width .25s}
+.ai.collapsed{width:46px}
+.ai .ahead{height:46px;flex:none;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid var(--line);background:linear-gradient(90deg,#f3f8ff,#fff)}
+.ai .ahead .t{font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:7px}
+.ai .ahead .t .sp{width:20px;height:20px;border-radius:6px;background:linear-gradient(135deg,var(--teal),var(--primary));color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px}
+.ai .collapse{margin-left:auto;width:28px;height:28px;border:1px solid var(--line);background:#fff;border-radius:7px;cursor:pointer;color:var(--sub);font-size:14px}
+.ai.collapsed .ahead .t,.ai.collapsed .abody{display:none}
+.ai.collapsed .ahead{justify-content:center;padding:0}
+.collapsed-tab{display:none;writing-mode:vertical-rl;font-size:12px;color:var(--primary);font-weight:700;letter-spacing:2px;margin-top:14px;cursor:pointer}
+.ai.collapsed .collapsed-tab{display:block;text-align:center}
+.abody{flex:1;overflow-y:auto;padding:12px}
+.disc{font-size:11px;color:#9aa3af;background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:8px 10px;line-height:1.55;margin-bottom:12px}
+
+/* 卡片通用 */
+.acard{border:1px solid var(--line);border-radius:12px;margin-bottom:12px;overflow:hidden}
+.acard .ch{padding:11px 13px;display:flex;align-items:center;gap:8px;background:#fafbfc;border-bottom:1px solid var(--line);font-size:13px;font-weight:700}
+.acard .ch .mini{margin-left:auto;font-size:11px;font-weight:600;color:var(--primary);cursor:pointer}
+.acard .cb{padding:12px 13px}
+
+/* 摘要结构化 */
+.kv{display:flex;gap:8px;font-size:12.5px;margin-bottom:9px;line-height:1.5}
+.kv .k{color:var(--sub);flex:none;width:58px}
+.kv .v{color:var(--ink);flex:1}
+.danger-flag{background:var(--danger-bg);border:1px solid #ffc9c4;border-radius:8px;padding:8px 10px;font-size:12px;color:#b02018;margin:4px 0 10px;display:flex;gap:7px;line-height:1.5}
+.danger-flag b{color:var(--danger)}
+.linkbtn{font-size:12px;color:var(--primary);cursor:pointer;font-weight:600}
+.quotebtn{width:100%;border:1px dashed #a9c6ff;background:#f4f9ff;color:var(--primary-d);border-radius:9px;padding:9px;font-size:12.5px;font-weight:600;cursor:pointer;margin-top:4px}
+
+/* 防锚定遮罩 */
+.dx-guard{padding:16px 14px;text-align:center}
+.dx-guard .ic{font-size:24px}
+.dx-guard h4{margin:8px 0 6px;font-size:13.5px}
+.dx-guard p{font-size:12px;color:var(--sub);line-height:1.6;margin:0 0 12px}
+.dx-guard button{width:100%;border:none;background:var(--primary);color:#fff;border-radius:9px;padding:10px;font-size:13px;font-weight:600;cursor:pointer}
+.dx-list{display:none}.dx-list.show{display:block}
+
+/* 可能病症条目 */
+.dx{border:1px solid var(--line);border-radius:11px;padding:11px;margin-bottom:10px;transition:.2s}
+.dx.ignored{opacity:.45;filter:grayscale(.5)}
+.dx .top{display:flex;align-items:center;gap:8px}
+.dx .nm{font-size:13.5px;font-weight:700}
+.dx .crit{font-size:10px;background:var(--danger);color:#fff;border-radius:6px;padding:1px 6px;font-weight:700}
+.dx .conf{margin-left:auto;font-size:11px;color:var(--sub)}
+.bar{height:5px;background:#eef0f3;border-radius:4px;margin:8px 0;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--primary),var(--teal))}
+.dx .basis{font-size:11.5px;color:var(--sub);margin:6px 0 4px}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+.bchip{font-size:11px;background:#eef4ff;color:var(--primary);border:1px solid #d6e6ff;border-radius:7px;padding:3px 8px;cursor:pointer}
+.bchip:hover{background:#dbe9ff}
+.dx .rec{font-size:11.5px;color:#5b6471;background:var(--soft);border-radius:7px;padding:7px 9px;margin-bottom:9px;line-height:1.5}
+.dx .rec b{color:var(--ink)}
+.dxact{display:flex;gap:8px}
+.dxact button{flex:1;border-radius:8px;padding:8px;font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--line);background:#fff}
+.dxact .adopt{background:var(--primary);color:#fff;border-color:var(--primary)}
+.dxact .ignore{color:var(--sub)}
+
+/* 留痕 */
+.audit{margin-top:4px}
+.audit .ah2{font-size:12px;font-weight:700;color:var(--sub);margin:0 0 6px;display:flex;align-items:center;gap:6px}
+.audit .log{font-size:11px;color:#7a828c;line-height:1.7;background:var(--soft);border-radius:8px;padding:8px 10px;max-height:120px;overflow-y:auto}
+.audit .log .e{display:flex;gap:6px}
+.audit .log .tm{color:var(--mut);flex:none}
+.empty{color:var(--mut)}
+
+/* 弹窗：原始对话 */
+.mask{position:absolute;inset:0;background:rgba(15,25,45,.45);z-index:80;display:none;align-items:center;justify-content:center}
+.mask.show{display:flex}
+.modal{background:#fff;width:440px;max-height:80%;border-radius:14px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.3)}
+.modal .mh{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;font-weight:700;font-size:14px}
+.modal .mh .x{margin-left:auto;cursor:pointer;color:var(--sub);font-size:18px;border:none;background:none}
+.modal .mb{padding:14px 16px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;background:#f6f8fb}
+.cv{display:flex;gap:8px}.cv.me{justify-content:flex-end}
+.cvb{max-width:78%;font-size:12.5px;line-height:1.5;padding:9px 11px;border-radius:11px;background:#fff;border:1px solid var(--line)}
+.cv.me .cvb{background:var(--primary);color:#fff;border:none}
+.cv .ava{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--primary));color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;flex:none}
+
+/* toast */
+.toast{position:absolute;bottom:22px;left:50%;transform:translateX(-50%) translateY(8px);background:rgba(28,32,38,.93);color:#fff;font-size:12.5px;padding:9px 16px;border-radius:20px;z-index:120;opacity:0;transition:.25s;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.app{position:relative}
+.hint{margin-top:10px;font-size:12px;color:#5b6471;text-align:center}
+.wrap{display:flex;flex-direction:column;align-items:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="win">
+  <div class="winbar">
+    <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+    <span class="addr">his.hospital.cn · 门诊医生工作站</span>
+  </div>
+  <div class="app">
+    <!-- 左 -->
+    <div class="side">
+      <div class="brand"><span class="l">＋</span> 医生工作站</div>
+      <div class="nav">
+        <a class="on">🩺 接诊台</a>
+        <a>📋 病历检索</a>
+        <a>💊 处方</a>
+        <a>📈 检验检查</a>
+      </div>
+      <div class="plist" id="plist">
+        <div class="h">候诊患者（3）</div>
+      </div>
+    </div>
+
+    <!-- 中：病历 -->
+    <div class="center">
+      <div class="chead">
+        <div>
+          <div class="pn" id="pName">—</div>
+          <div class="meta" id="pMeta"></div>
+        </div>
+        <span class="pill" id="pNo"></span>
+        <span class="src">← 由 AI 智能导诊转入</span>
+      </div>
+      <div class="crecord">
+        <div class="rtitle">📝 患者病历 <span class="ed">可编辑 · 自动保存</span></div>
+        <div class="field"><label>主诉</label><div class="inp" contenteditable id="f_chief" data-ph="点击编辑，或用右侧「一键引用」填入…"></div></div>
+        <div class="field"><label>现病史</label><div class="inp area" contenteditable id="f_hpi" data-ph="点击编辑，或用右侧「一键引用」填入…"></div></div>
+        <div class="grid2">
+          <div class="field"><label>既往史 / 过敏史</label><div class="inp" contenteditable id="f_past" data-ph="—"></div></div>
+          <div class="field"><label>体格检查</label><div class="inp" contenteditable id="f_pe" data-ph="—"></div></div>
+        </div>
+        <div class="field"><label>初步诊断</label><div class="inp area" contenteditable id="f_dx" data-ph="请先记录您的初步判断（建议在查看 AI 分析前填写）…"></div></div>
+        <div class="field"><label>处置 / 医嘱</label><div class="inp" contenteditable id="f_plan" data-ph="—"></div></div>
+      </div>
+      <div class="savebar">
+        <span class="note">⚕ 本病历由接诊医师负责，AI 内容仅作辅助参考</span>
+        <button class="btn ghost" onclick="toast('已保存草稿')">保存草稿</button>
+        <button class="btn primary" onclick="toast('病历已提交并签名')">提交病历</button>
+      </div>
+    </div>
+
+    <!-- 右：AI -->
+    <div class="ai" id="aiPanel">
+      <div class="ahead">
+        <div class="t"><span class="sp">AI</span> 智能辅助</div>
+        <button class="collapse" onclick="toggleAI()" title="折叠/展开">⟩</button>
+        <div class="collapsed-tab" onclick="toggleAI()">AI 智能辅助</div>
+      </div>
+      <div class="abody">
+        <div class="disc">AI 内容基于患者导诊对话与病历自动生成，<b>仅供临床参考，不构成诊断</b>，最终以医师判断为准；采纳与忽略均会留痕。</div>
+
+        <!-- 摘要 -->
+        <div class="acard">
+          <div class="ch">🗒 AI 对话摘要
+            <span class="mini" onclick="openRaw()">查看原始记录</span>
+          </div>
+          <div class="cb" id="sumBody"><!-- filled --></div>
+        </div>
+
+        <!-- 辅助诊断 -->
+        <div class="acard">
+          <div class="ch">🧠 AI 可能病症
+            <span class="mini" id="dxRefresh" style="display:none" onclick="runDx()">↻ 重新分析</span>
+          </div>
+          <div class="cb">
+            <div class="dx-guard" id="dxGuard">
+              <div class="ic">🛡️</div>
+              <h4>建议先记录您的初步判断</h4>
+              <p>为避免先入为主，AI 鉴别诊断默认折叠。请在左侧填写「初步诊断」后再展开参考。</p>
+              <button onclick="runDx()">我已记录，查看 AI 分析</button>
+            </div>
+            <div class="dx-list" id="dxList"></div>
+          </div>
+        </div>
+
+        <!-- 留痕 -->
+        <div class="audit acard">
+          <div class="ch">🧾 操作留痕</div>
+          <div class="cb">
+            <div class="log" id="auditLog"><span class="empty">暂无操作记录</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 原始对话弹窗 -->
+  <div class="mask" id="rawMask">
+    <div class="modal">
+      <div class="mh">📞 患者 AI 导诊原始对话 <button class="x" onclick="closeRaw()">×</button></div>
+      <div class="mb" id="rawBody"></div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+</div>
+<div class="hint">点左侧患者切换 · 「一键引用」把摘要填入病历 · 先写初步诊断再展开 AI 可能病症 · 点依据可高亮病历原文</div>
+</div>
+
+<script>
+/* ====== 演示数据（与患者端导诊流程呼应） ====== */
+const PATIENTS={
+  zw:{
+    name:'张伟', meta:'男 · 45岁 · 呼吸内科', no:'门诊号 2026-061801', av:'张', crit:true,
+    record:{
+      chief:'发热伴咳嗽 3 天',
+      hpi:'患者诉<mark class="kw" data-k="fever">持续发热 3 天</mark>，最高 38.9℃，伴<mark class="kw" data-k="cough">咳嗽、咳黄痰</mark>，自觉乏力。<mark class="kw" data-k="breath">无明显胸闷气促</mark>，无咯血、盗汗。',
+      past:'否认高血压、糖尿病；无药物过敏史',
+      pe:'',
+    },
+    danger:'患者端导诊已标记：发热 >38.5℃ 持续 3 天，需警惕下呼吸道感染。',
+    summary:[
+      ['主诉','发热伴咳嗽 3 天'],
+      ['症状','发热(最高38.9℃)、咳嗽、咳黄痰、乏力'],
+      ['时长','3 天，逐渐加重'],
+      ['过敏史','否认药物过敏'],
+      ['用药','自服布洛芬 1 次'],
+    ],
+    raw:[
+      ['ai','您好，请描述您的不适症状。'],
+      ['me','发烧三天了，一直咳嗽'],
+      ['ai','体温最高多少？有没有咳痰、胸闷？'],
+      ['me','烧到38.9，咳黄痰，有点没力气，不怎么胸闷'],
+      ['ai','根据描述为您推荐【呼吸内科】，已为您挂号。'],
+    ],
+    dx:[
+      {n:'急性支气管炎',crit:false,conf:62,basis:['咳嗽、咳黄痰','发热3天'],rec:'建议查<b>血常规+CRP</b>；必要时<b>胸片</b>排查肺炎。'},
+      {n:'社区获得性肺炎',crit:true,conf:34,basis:['持续发热3天','咳黄痰'],rec:'⚠ 不可漏诊：建议<b>胸部X线/CT</b>，听诊肺部啰音。'},
+      {n:'上呼吸道感染',crit:false,conf:48,basis:['咳嗽','乏力'],rec:'若胸片阴性、CRP不高，对症处理观察。'},
+    ],
+  },
+  lx:{
+    name:'李秀兰', meta:'女 · 60岁 · 消化内科', no:'门诊号 2026-061802', av:'李', crit:true,
+    record:{
+      chief:'右下腹疼痛 1 天',
+      hpi:'患者诉<mark class="kw" data-k="abd">右下腹持续疼痛 1 天</mark>，<mark class="kw" data-k="fever2">伴低热</mark>，<mark class="kw" data-k="nau">恶心未呕吐</mark>，无腹泻。',
+      past:'胆囊结石病史 5 年；青霉素过敏',
+      pe:'',
+    },
+    danger:'患者端导诊已标记：右下腹固定压痛，需排查急腹症（阑尾炎等）。',
+    summary:[
+      ['主诉','右下腹疼痛 1 天'],
+      ['症状','右下腹持续痛、低热、恶心'],
+      ['时长','约 1 天'],
+      ['过敏史','青霉素过敏 ⚠'],
+      ['用药','未用药'],
+    ],
+    raw:[
+      ['ai','您好，请描述您的不适症状。'],
+      ['me','右边肚子下面一直疼，有点低烧'],
+      ['ai','疼痛是固定一处还是游走？有没有恶心呕吐？'],
+      ['me','就右下角固定疼，有点想吐，没拉肚子'],
+      ['ai','为您推荐【消化内科】，如疼痛加剧请及时急诊。'],
+    ],
+    dx:[
+      {n:'急性阑尾炎',crit:true,conf:58,basis:['右下腹固定痛','低热','恶心'],rec:'⚠ 急腹症优先排查：查<b>血常规</b>、腹部<b>超声/CT</b>，外科会诊。'},
+      {n:'胆囊炎急性发作',crit:false,conf:30,basis:['胆囊结石病史','低热'],rec:'结合<b>肝胆超声</b>评估，注意青霉素过敏史选药。'},
+      {n:'急性胃肠炎',crit:false,conf:26,basis:['恶心','低热'],rec:'若超声阴性、转移性腹痛不明显可考虑。'},
+    ],
+  },
+  wq:{
+    name:'王强', meta:'男 · 33岁 · 神经内科', no:'门诊号 2026-061803', av:'王', crit:false,
+    record:{
+      chief:'反复头痛伴失眠 2 周',
+      hpi:'患者诉<mark class="kw" data-k="head">头痛反复发作 2 周</mark>，多为双侧胀痛，<mark class="kw" data-k="sleep">入睡困难</mark>，工作压力大。无恶心呕吐、无肢体麻木。',
+      past:'体健，无特殊',
+      pe:'',
+    },
+    danger:'',
+    summary:[
+      ['主诉','反复头痛伴失眠 2 周'],
+      ['症状','双侧胀痛、入睡困难、压力大'],
+      ['时长','约 2 周'],
+      ['过敏史','无'],
+      ['用药','无'],
+    ],
+    raw:[
+      ['ai','您好，请描述您的不适症状。'],
+      ['me','最近两周老是头疼，还睡不着'],
+      ['ai','头痛是哪种感觉？有没有恶心、看东西模糊？'],
+      ['me','两边胀胀的疼，没恶心，就是睡不好，最近压力大'],
+      ['ai','为您推荐【神经内科】，已为您挂号。'],
+    ],
+    dx:[
+      {n:'紧张型头痛',crit:false,conf:67,basis:['双侧胀痛','压力大','失眠'],rec:'多与精神紧张相关；建议作息调节，必要时神经查体。'},
+      {n:'睡眠障碍相关头痛',crit:false,conf:41,basis:['入睡困难','病程2周'],rec:'评估睡眠，可用<b>匹兹堡睡眠量表</b>。'},
+      {n:'偏头痛',crit:false,conf:22,basis:['反复发作'],rec:'若为搏动性、单侧、畏光，需进一步鉴别。'},
+    ],
+  },
+};
+
+let cur='zw';
+let auditEntries=[];
+
+/* ====== 渲染左侧患者列表 ====== */
+function renderList(){
+  const box=document.getElementById('plist');
+  box.innerHTML='<div class="h">候诊患者（3）</div>';
+  Object.entries(PATIENTS).forEach(([id,p])=>{
+    const el=document.createElement('div');
+    el.className='pt'+(id===cur?' on':'');
+    el.onclick=()=>switchPatient(id);
+    el.innerHTML='<div class="av">'+p.av+'</div><div><div class="nm">'+p.name+'</div>'+
+      '<div class="mt">'+p.meta.split(' · ').slice(1).join(' · ')+'</div></div>'+
+      (p.crit?'<div class="badge">危急</div>':'<div class="waitdot"></div>');
+    box.appendChild(el);
+  });
+}
+
+/* ====== 切换患者 ====== */
+function switchPatient(id){
+  cur=id;const p=PATIENTS[id];
+  renderList();
+  document.getElementById('pName').textContent=p.name;
+  document.getElementById('pMeta').textContent=p.meta;
+  document.getElementById('pNo').textContent=p.no;
+  // 病历：现病史/主诉等已有基础内容（演示），诊断与处置留空给医生
+  document.getElementById('f_chief').innerHTML=p.record.chief;
+  document.getElementById('f_hpi').innerHTML=p.record.hpi;
+  document.getElementById('f_past').innerHTML=p.record.past;
+  document.getElementById('f_pe').innerHTML=p.record.pe;
+  document.getElementById('f_dx').innerHTML='';
+  document.getElementById('f_plan').innerHTML='';
+  renderSummary(p);
+  resetDx();
+}
+
+/* ====== AI 摘要 ====== */
+function renderSummary(p){
+  const b=document.getElementById('sumBody');
+  let h='';
+  if(p.danger){
+    h+='<div class="danger-flag">⚠ <span><b>危险信号</b>　'+p.danger+'</span></div>';
+  }
+  p.summary.forEach(([k,v])=>{ h+='<div class="kv"><span class="k">'+k+'</span><span class="v">'+v+'</span></div>'; });
+  h+='<button class="quotebtn" onclick="quoteToRecord()">⤵ 一键引用进病历（主诉/现病史/过敏史）</button>';
+  b.innerHTML=h;
+}
+function quoteToRecord(){
+  const p=PATIENTS[cur];
+  document.getElementById('f_chief').innerHTML=p.record.chief;
+  document.getElementById('f_hpi').innerHTML=p.record.hpi;
+  document.getElementById('f_past').innerHTML=p.record.past;
+  flash('f_hpi');flash('f_chief');
+  toast('已将 AI 摘要填入病历，请医师核对');
+  logAudit('引用摘要入病历');
+}
+
+/* ====== 原始对话 ====== */
+function openRaw(){
+  const p=PATIENTS[cur];
+  const box=document.getElementById('rawBody');
+  box.innerHTML=p.raw.map(([who,t])=> who==='me'
+    ? '<div class="cv me"><div class="cvb">'+t+'</div></div>'
+    : '<div class="cv"><div class="ava">AI</div><div class="cvb">'+t+'</div></div>'
+  ).join('');
+  document.getElementById('rawMask').classList.add('show');
+}
+function closeRaw(){document.getElementById('rawMask').classList.remove('show');}
+
+/* ====== 可能病症（防锚定 + 依据高亮 + 采纳/忽略） ====== */
+function resetDx(){
+  document.getElementById('dxGuard').style.display='block';
+  document.getElementById('dxList').classList.remove('show');
+  document.getElementById('dxList').innerHTML='';
+  document.getElementById('dxRefresh').style.display='none';
+}
+function runDx(){
+  document.getElementById('dxGuard').style.display='none';
+  const list=document.getElementById('dxList');
+  list.classList.add('show');
+  list.innerHTML='<div style="text-align:center;color:#9aa3af;font-size:12px;padding:14px">⏳ 正在读取病历并分析…</div>';
+  document.getElementById('dxRefresh').style.display='inline';
+  setTimeout(()=>renderDx(),900);
+}
+function renderDx(){
+  const p=PATIENTS[cur];
+  const list=document.getElementById('dxList');
+  list.innerHTML='';
+  // 置信度从高到低
+  p.dx.slice().sort((a,b)=>b.conf-a.conf).forEach((d,i)=>{
+    const el=document.createElement('div');el.className='dx';
+    const chips=d.basis.map(b=>'<span class="bchip" onclick="highlight(\''+keyFor(b)+'\')">'+b+'</span>').join('');
+    el.innerHTML=
+      '<div class="top"><span class="nm">'+d.n+'</span>'+(d.crit?'<span class="crit">勿漏诊</span>':'')+
+        '<span class="conf">可能性 '+d.conf+'%</span></div>'+
+      '<div class="bar"><i style="width:'+d.conf+'%"></i></div>'+
+      '<div class="basis">依据（点击高亮病历）：</div><div class="chips">'+chips+'</div>'+
+      '<div class="rec">建议：'+d.rec+'</div>'+
+      '<div class="dxact"><button class="adopt" onclick="adopt(this,\''+d.n+'\')">采纳入诊断</button>'+
+        '<button class="ignore" onclick="ignore(this,\''+d.n+'\')">忽略</button></div>';
+    list.appendChild(el);
+  });
+  logAudit('展开 AI 可能病症');
+}
+/* 依据文字 → 病历 mark 的 data-k 映射（演示） */
+function keyFor(text){
+  const m={'咳嗽、咳痰':'cough','咳嗽、咳黄痰':'cough','咳嗽':'cough','咳黄痰':'cough','发热3天':'fever','持续发热3天':'fever','乏力':'fever',
+    '右下腹固定痛':'abd','右下腹固定疼':'abd','恶心':'nau','低热':'fever2','胆囊结石病史':'',
+    '双侧胀痛':'head','反复发作':'head','入睡困难':'sleep','失眠':'sleep','病程2周':'head','压力大':'sleep'};
+  return m[text]||'';
+}
+function highlight(k){
+  document.querySelectorAll('mark.kw').forEach(m=>m.classList.remove('hl'));
+  if(!k)return toast('该依据来自既往史/对话，无病历正文对应');
+  let found=false;
+  document.querySelectorAll('mark.kw[data-k="'+k+'"]').forEach(m=>{m.classList.add('hl');found=true;
+    m.scrollIntoView({block:'center',behavior:'smooth'});});
+  if(!found)toast('未在当前病历正文找到对应原文');
+}
+function adopt(btn,name){
+  const dxField=document.getElementById('f_dx');
+  const exist=dxField.innerText.trim();
+  dxField.innerHTML=(exist? exist+'；':'')+name;
+  flash('f_dx');
+  toast('已采纳「'+name+'」入初步诊断');
+  logAudit('采纳：'+name);
+  btn.textContent='已采纳';btn.disabled=true;btn.style.opacity=.6;
+}
+function ignore(btn,name){
+  btn.closest('.dx').classList.add('ignored');
+  logAudit('忽略：'+name);
+  toast('已忽略「'+name+'」，反馈已记录');
+}
+
+/* ====== 留痕 ====== */
+function logAudit(txt){
+  const t=new Date();const hm=String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0')+':'+String(t.getSeconds()).padStart(2,'0');
+  auditEntries.unshift({hm,txt,who:'李医生',pt:PATIENTS[cur].name});
+  const box=document.getElementById('auditLog');
+  box.innerHTML=auditEntries.map(e=>'<div class="e"><span class="tm">'+e.hm+'</span><span>'+e.who+' · '+e.pt+' · '+e.txt+'</span></div>').join('');
+}
+
+/* ====== 工具 ====== */
+function toggleAI(){document.getElementById('aiPanel').classList.toggle('collapsed');}
+let tt;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),1800);}
+function flash(id){const el=document.getElementById(id);el.style.transition='background .15s';el.style.background='#eaf4ff';setTimeout(()=>el.style.background='#fff',500);}
+
+renderList();switchPatient('zw');
+</script>
+</body>
+</html>
